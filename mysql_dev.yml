@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-svc
+spec:
+  selector:
+    app: mysql
+  type: NodePort
+  ports:
+    - port: 3333
+      targetPort: mysqlp
+      nodePort: 32211
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+        name: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:latest
+          imagePullPolicy: Always
+          ports:
+            - name: mysqlp
+              containerPort: 3306
+              protocol: TCP
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+            - name: mysql-config-volume
+              mountPath: /etc/mysql/mysql.conf.d/my-custom.cnf
+              subPath: my-custom.cnf
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "a1s2d3f4g5"
+            - name: MYSQL_INITSB_SKIP_TZINFO
+              value: "yes"
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+        - name: mysql-config-volume
+          configMap:
+            name: mysql-config
+            items:
+            - key: main-config
+              path: my-custom.cnf
